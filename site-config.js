@@ -1,5 +1,5 @@
 window.projectConfig = {
-  githubUrl: "",
+  githubUrl: "https://github.com/3230001239/diffdehaze_code.git",
   paperUrl: "",
   authors: { zh: "", en: "" },
   affiliation: { zh: "", en: "" },
