@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="基于扩散模型的夜间图像去雾方法。在 RealNightHaze 上交互对比原始有雾图、八种对比方法和本文方法。">
+  <meta name="theme-color" content="#ffffff">
+  <title>基于扩散模型的夜间图像去雾方法</title>
+  <link rel="stylesheet" href="./style.css">
+  <script defer src="./site-config.js"></script>
+  <script defer src="./scenes.js"></script>
+  <script defer src="./metrics.js"></script>
+  <script defer src="./main.js"></script>
+</head>
+<body id="top">
+  <a class="skip" href="#abstract" data-en="Skip to the abstract">跳到摘要</a>
+  <header class="paper-header shell">
+    <h1 id="paper-title" data-en="Diffusion‑Based Nighttime Image Dehazing">基于扩散模型的夜间图像去雾方法</h1>
+    <p class="authors" id="authors"></p>
+    <p class="affiliation" id="affiliation" hidden></p>
+    <p class="venue" id="venue" hidden></p>
+    <nav class="top-actions" aria-label="语言、论文与代码" data-en-label="Language, paper and code">
+      <div class="language">
+        <a href="?" data-language="zh" lang="zh-CN" aria-current="true">中文</a>
+        <a href="?lang=en" data-language="en" lang="en">English</a>
+      </div>
+      <a class="header-link" id="paper-link" hidden data-en="Paper">论文</a>
+      <a class="header-link github" id="github-link" role="link" aria-disabled="true">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 .75a11.25 11.25 0 0 0-3.56 21.92c.56.1.77-.24.77-.54v-2.08c-3.13.68-3.79-1.33-3.79-1.33-.51-1.3-1.25-1.65-1.25-1.65-1.02-.7.08-.68.08-.68 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.64 1.22 3.28.94.1-.73.39-1.22.71-1.5-2.5-.28-5.13-1.25-5.13-5.56 0-1.23.44-2.24 1.16-3.03-.12-.28-.5-1.43.11-2.98 0 0 .95-.3 3.09 1.15a10.75 10.75 0 0 1 5.63 0c2.14-1.45 3.08-1.15 3.08-1.15.62 1.55.24 2.7.12 2.98.72.8 1.15 1.8 1.15 3.03 0 4.32-2.63 5.27-5.14 5.55.4.35.76 1.03.76 2.08v3.07c0 .3.2.65.77.54A11.25 11.25 0 0 0 12 .75Z"/></svg>
+        GitHub
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="abstract-band" id="abstract" aria-labelledby="abstract-title">
+      <div class="shell abstract-inner">
+        <h2 id="abstract-title" data-en="Abstract">摘要</h2>
+        <p class="abstract-text" id="abstract-text" hidden></p>
+      </div>
+    </section>
+
+    <section class="shell content-section" id="method" aria-labelledby="method-title">
+      <h2 id="method-title" data-en="Method Overview">整体架构</h2>
+      <figure class="pipeline">
+        <a href="./assets/method-overview.webp" target="_blank" rel="noopener" aria-label="打开方法框架原图" data-en-label="Open the full method diagram">
+          <img src="./assets/method-overview.webp" width="2200" height="1238" alt="论文中的两阶段训练框架与三个模块示意图" data-en-alt="Two-stage training framework and three modules from the paper">
+        </a>
+        <figcaption data-en="The model estimates a clean latent using residual prediction, then re-noises it to initialize restoration. ControlNet and a clear-night text condition guide the diffusion process. Finally, a luminance prior determines whether to apply constrained gamma correction.">模型首先通过残差预测估计清晰潜变量，再将其重新加噪作为扩散恢复的起点。条件扩散结合 ControlNet 和清晰夜景文本引导恢复，最后根据清晰夜景的亮度分布先验，决定是否进行受约束的伽马矫正。</figcaption>
+      </figure>
+    </section>
+
+    <section class="comparison-band" id="comparison" aria-labelledby="comparison-title">
+      <div class="shell content-section">
+        <h2 id="comparison-title" data-en="Visual Comparison">视觉对比</h2>
+        <div class="scene-picker">
+          <label class="scene-field">
+            <span data-en="Image selector">选择图像</span>
+            <select id="scene-select"></select>
+          </label>
+          <p class="scene-dataset">RealNightHaze</p>
+        </div>
+        <div class="comparison-layout">
+          <div class="method-control method-left">
+            <div class="method-list" id="left-method-list" role="group" aria-label="左侧方法" data-en-label="Left method"></div>
+            <label class="method-field"><span data-en="Left method">左侧方法</span><select id="left-method"></select></label>
+          </div>
+          <div class="comparison-stage" id="comparison-stage">
+            <img class="comparison-image" id="right-image" alt="" draggable="false">
+            <img class="comparison-image image-left" id="left-image" alt="" draggable="false">
+            <div class="divider" aria-hidden="true"></div>
+            <div class="divider-handle" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 8-4 4 4 4m6-8 4 4-4 4"/></svg>
+            </div>
+            <input type="range" id="comparison-slider" min="0" max="100" value="50"
+                   aria-label="移动视觉对比分界线" data-en-label="Move the comparison divider">
+          </div>
+          <div class="method-control method-right">
+            <div class="method-list" id="right-method-list" role="group" aria-label="右侧方法" data-en-label="Right method"></div>
+            <label class="method-field"><span data-en="Right method">右侧方法</span><select id="right-method"></select></label>
+          </div>
+        </div>
+        <noscript>请启用 JavaScript 以切换图像和方法。 Enable JavaScript to switch images and methods.</noscript>
+      </div>
+    </section>
+
+    <section class="shell content-section" id="results" aria-labelledby="results-title">
+      <h2 id="results-title" data-en="Quantitative Comparison">定量比较</h2>
+      <div class="results-tables" id="results-tables"></div>
+      <p class="table-note" data-en="↑ Higher is better. ↓ Lower is better. Bold and underline indicate the best and second-best scores.">↑ 越大越好，↓ 越小越好。粗体和下划线分别标记最优和次优。</p>
+      <template id="metrics-template">
+        <div class="table-scroll" role="region" tabindex="0">
+          <table>
+            <caption></caption>
+            <thead><tr>
+              <th scope="col" class="method-column"></th>
+              <th scope="col">BRISQUE ↓</th><th scope="col">TOPIQ-NR ↑</th><th scope="col">MANIQA ↑</th>
+              <th scope="col">CLIPIQA ↑</th><th scope="col">DBCNN ↑</th><th scope="col">HyperIQA ↑</th>
+              <th scope="col">Q-Align ↑</th><th scope="col">QualiCLIP+ ↑</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </template>
+
+      <figure class="static-comparison" aria-labelledby="static-caption">
+        <a href="./assets/realnighthaze-paper-comparison.webp" target="_blank" rel="noopener" aria-label="打开去雾对比原图" data-en-label="Open the full comparison figure">
+          <img src="./assets/realnighthaze-paper-comparison.webp" width="2500" height="1035" alt="RealNightHaze 上三个夜间场景的原始有雾图、八种对比方法和本文方法，以及放大的局部细节" data-en-alt="Hazy images, eight baselines, and our results for three RealNightHaze scenes, with enlarged details" loading="lazy">
+        </a>
+        <figcaption id="static-caption" data-en="Dehazing results and local details on RealNightHaze">RealNightHaze 数据集上的去雾结果与局部细节对比</figcaption>
+      </figure>
+    </section>
+
+    <section class="shell content-section" id="citation" hidden>
+      <h2>BibTeX</h2>
+      <pre><code id="bibtex"></code></pre>
+    </section>
+  </main>
+  <footer class="shell footer">
+    <a href="#top" data-en="Back to top ↑">返回顶部 ↑</a>
+  </footer>
+</body>
+</html>
